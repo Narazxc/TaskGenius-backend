@@ -1,0 +1,5 @@
+# Node.js specific
+node_modules/
+config.env
+public/img/
+dev-data/
