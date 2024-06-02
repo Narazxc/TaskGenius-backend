@@ -57,7 +57,11 @@ app.use(hpp());
 // cors
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://task-genius-frontend-ics256m0d-narazxcs-projects.vercel.app",
+    ],
     credentials: true, // Allow credentials
   })
 );
