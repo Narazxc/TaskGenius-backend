@@ -60,7 +60,7 @@ notificationSchema.pre(/^find/, function (next) {
     select: "name",
   }).populate({
     path: "fromUser",
-    select: "name photo",
+    select: "name photo cloudinaryPhoto",
   });
 
   next();

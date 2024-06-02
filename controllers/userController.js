@@ -1,5 +1,7 @@
 const multer = require("multer");
 const sharp = require("sharp");
+const cloudinary = require("cloudinary").v2;
+
 const User = require("../models/userModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
@@ -17,6 +19,12 @@ const factory = require("./handlerFactory");
 //   },
 // });
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 const multerStorage = multer.memoryStorage();
 
 // The goal of this func is to check whether uploaded file is an img
@@ -32,19 +40,24 @@ const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
 
 exports.uploadUserPhoto = upload.single("photo");
 
-exports.resizeUserPhoto = (req, res, next) => {
+exports.resizeUserPhoto = catchAsync(async (req, res, next) => {
   if (!req.file) return next();
 
   req.file.filename = `user-${req.user.id}-${Date.now()}.jpeg`;
 
-  sharp(req.file.buffer)
+  // Resize the image
+  const resizedImageBuffer = await sharp(req.file.buffer)
     .resize(500, 500)
     .toFormat("jpeg")
     .jpeg({ quality: 100 })
-    .toFile(`public/img/users/${req.file.filename}`);
+    .toBuffer();
+  // .toFile(`public/img/users/${req.file.filename}`);
+
+  const base64Image = resizedImageBuffer.toString("base64");
+  req.file.dataURI = dataURI = `data:image/jpeg;base64,${base64Image}`;
 
   next();
-};
+});
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -106,9 +119,29 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     );
   }
 
+  // // 2) Filtered out unwanted fields name that are not allowed to be updated
+  // const filteredBody = filterObj(req.body, "name", "email");
+  // if (req.file) filteredBody.photo = req.file.filename;
+
   // 2) Filtered out unwanted fields name that are not allowed to be updated
   const filteredBody = filterObj(req.body, "name", "email");
-  if (req.file) filteredBody.photo = req.file.filename;
+
+  if (req.file) {
+    try {
+      const result = await cloudinary.uploader.upload(req.file.dataURI, {
+        folder: "user_photos", // Optional: specify a folder in Cloudinary
+      });
+
+      // filteredBody.photo = req.file.filename; // Keeping the local filename if necessary
+      filteredBody.cloudinaryPhoto = result.secure_url; // Store the Cloudinary URL
+    } catch (err) {
+      console.log(err.message);
+
+      return next(
+        new AppError("Failed to upload image. Please try again later.", 500)
+      );
+    }
+  }
 
   // 3) Update user document
   const updateUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {

@@ -117,7 +117,7 @@ taskSchema.pre(/^find/, function (next) {
     select: "-__v -passwordChangedAt",
   }).populate({
     path: "creator",
-    select: "name photo",
+    select: "name photo cloudinaryPhoto",
   });
 
   next();
