@@ -60,7 +60,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:3000",
-      "https://task-genius-frontend-ics256m0d-narazxcs-projects.vercel.app",
+      process.env.FRONTEND_URL,
     ],
     credentials: true, // Allow credentials
   })
